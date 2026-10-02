@@ -1,93 +1,51 @@
-"""Single source of truth for the WAX//001 catalog.
-Prices are in EUR. `amount` is in cents for Stripe. `lookup_key` ties a variant
-to a Stripe Price. Images are placeholder URLs (user will replace later).
-"""
+"""WEARHOUSE 60 — real single-product catalog; EUR prices include tax."""
 
 CURRENCY = "eur"
-
-# Main hero product with washes (variants)
 MAIN_PRODUCT = {
-    "id": "wax-001",
-    "name": "WAX//001",
-    "subtitle": "Hand-Waxed Selvedge Jean",
-    "type": "variant",
-    "compareAtPrice": 185,
-    "rating": 4.9,
-    "reviews": 214,
+    "id": "wearhouse60-jean",
+    "name": "60 WAXED JEAN",
+    "subtitle": "Denim ciré · 14 oz · Revers camo",
+    "compareAtPrice": 110,
     "description": (
-        "Cut from 14.5oz Japanese selvedge denim and finished with a hand-applied "
-        "wax coating for a second-skin patina that only gets better with wear. "
-        "Built to break in, made to last."
+        "Du poids, du relief, du caractère. Un denim épais de 14 oz (environ 475 g/m²), "
+        "100 % coton, avec une finition cirée aux reflets irréguliers. "
+        "Une coupe ample, un noir marbré et un revers camo qui change tout."
     ),
-    "washes": [
-        {"id": "raw-indigo", "name": "Raw Indigo", "hex": "#2b3a67", "price": 155,
-         "lookup_key": "wax001_raw_indigo",
-         "image": "https://images.unsplash.com/photo-1714143136372-ddaf8b606da7?crop=entropy&cs=srgb&fm=jpg&q=85&w=900",
-         "hover": "https://images.unsplash.com/photo-1637069585336-827b298fe84a?crop=entropy&cs=srgb&fm=jpg&q=85&w=900"},
-        {"id": "washed-black", "name": "Washed Black", "hex": "#1c1c1c", "price": 155,
-         "lookup_key": "wax001_washed_black",
-         "image": "https://images.unsplash.com/photo-1631112230741-446762ee05ac?crop=entropy&cs=srgb&fm=jpg&q=85&w=900",
-         "hover": "https://images.unsplash.com/photo-1640336437301-8368b53861ab?crop=entropy&cs=srgb&fm=jpg&q=85&w=900"},
-        {"id": "coated-wax", "name": "Coated Wax", "hex": "#3a3027", "price": 175,
-         "lookup_key": "wax001_coated_wax",
-         "image": "https://images.unsplash.com/photo-1645859610425-f0f4177df5f0?crop=entropy&cs=srgb&fm=jpg&q=85&w=900",
-         "hover": "https://images.unsplash.com/photo-1671624759834-bcf0d3dd2517?crop=entropy&cs=srgb&fm=jpg&q=85&w=900"},
+    "washes": [{
+        "id": "black-camo", "name": "Noir ciré / Camo", "hex": "#242820",
+        "price": 99.99, "lookup_key": "wearhouse60_black_camo",
+        "image": "/images/jean-flat.webp", "hover": "/images/jean-front.webp",
+    }],
+    "gallery": [
+        {"src": "/images/jean-flat.webp", "alt": "60 WAXED JEAN — vue entière à plat, revers camo", "label": "À plat"},
+        {"src": "/images/jean-front.webp", "alt": "Jean noir ciré porté de face, coupe ample et revers camo", "label": "De face"},
+        {"src": "/images/jean-back.webp", "alt": "Jean noir ciré porté de dos", "label": "De dos"},
+        {"src": "/images/detail-camo.webp", "alt": "Détail du revers intérieur camouflage", "label": "Le camo"},
     ],
-    "sizes": [28, 29, 30, 31, 32, 33, 34, 36],
+    "sizes": ["1", "2", "3"],
 }
+GRID_PRODUCTS = []
+INITIAL_STOCK = {"1": 17, "2": 17, "3": 16}
 
-# Secondary "style it" products (simple, single price)
-GRID_PRODUCTS = [
-    {"id": "wax-jacket", "name": "WAX//Trucker Jacket", "price": 215, "compareAt": None,
-     "lookup_key": "wax_trucker_jacket", "sizes": ["S", "M", "L", "XL"],
-     "image": "https://images.unsplash.com/photo-1618695387047-92fcda1b6231",
-     "hover": "https://images.unsplash.com/photo-1618695386836-4f5809db074f"},
-    {"id": "wax-short", "name": "WAX//001 Cut-Off Short", "price": 95, "compareAt": 115,
-     "lookup_key": "wax_cutoff_short", "sizes": ["28", "30", "32", "34"],
-     "image": "https://images.unsplash.com/photo-1637069585336-827b298fe84a?crop=entropy&cs=srgb&fm=jpg&q=85&w=900",
-     "hover": "https://images.unsplash.com/photo-1714143136372-ddaf8b606da7?crop=entropy&cs=srgb&fm=jpg&q=85&w=900"},
-    {"id": "wax-belt", "name": "Copper Rivet Belt", "price": 68, "compareAt": None,
-     "lookup_key": "copper_rivet_belt", "sizes": ["OS"],
-     "image": "https://images.unsplash.com/photo-1631112230741-446762ee05ac?crop=entropy&cs=srgb&fm=jpg&q=85&w=900",
-     "hover": "https://images.unsplash.com/photo-1640336437301-8368b53861ab?crop=entropy&cs=srgb&fm=jpg&q=85&w=900"},
-    {"id": "wax-tee", "name": "Heavyweight Box Tee", "price": 52, "compareAt": None,
-     "lookup_key": "heavyweight_box_tee", "sizes": ["S", "M", "L", "XL"],
-     "image": "https://images.unsplash.com/photo-1617354839314-9476d4ca8a3d",
-     "hover": "https://images.unsplash.com/photo-1541099649105-f69ad21f3246"},
-]
 
-# Build a flat lookup of all purchasable SKUs -> metadata
 def all_variants():
-    """Yield (lookup_key, product_id, variant_id, variant_name, price, name, image)."""
-    for w in MAIN_PRODUCT["washes"]:
+    for wash in MAIN_PRODUCT["washes"]:
         yield {
-            "lookup_key": w["lookup_key"], "product_id": MAIN_PRODUCT["id"],
-            "variant_id": w["id"], "variant_name": w["name"], "price": w["price"],
-            "name": f"{MAIN_PRODUCT['name']} \u2014 {w['name']}", "image": w["image"],
-            "sizes": MAIN_PRODUCT["sizes"],
+            "lookup_key": wash["lookup_key"], "product_id": MAIN_PRODUCT["id"],
+            "variant_id": wash["id"], "variant_name": wash["name"],
+            "price": wash["price"], "name": MAIN_PRODUCT["name"],
+            "image": wash["image"], "sizes": MAIN_PRODUCT["sizes"],
         }
-    for p in GRID_PRODUCTS:
-        yield {
-            "lookup_key": p["lookup_key"], "product_id": p["id"],
-            "variant_id": "", "variant_name": "", "price": p["price"],
-            "name": p["name"], "image": p["image"], "sizes": p["sizes"],
-        }
+
 
 def sku_index():
-    return {v["lookup_key"]: v for v in all_variants()}
+    return {variant["lookup_key"]: variant for variant in all_variants()}
+
 
 def inventory_seed():
-    """Return list of inventory docs. Default qty 10; some jean sizes start sold-out."""
-    docs = []
-    sold_out = {("raw-indigo", 29), ("raw-indigo", 36), ("washed-black", 36), ("coated-wax", 29)}
-    for w in MAIN_PRODUCT["washes"]:
-        for s in MAIN_PRODUCT["sizes"]:
-            qty = 0 if (w["id"], s) in sold_out else 10
-            docs.append({"_id": f"{MAIN_PRODUCT['id']}:{w['id']}:{s}",
-                         "product_id": MAIN_PRODUCT["id"], "variant_id": w["id"],
-                         "size": str(s), "qty": qty})
-    for p in GRID_PRODUCTS:
-        for s in p["sizes"]:
-            docs.append({"_id": f"{p['id']}::{s}", "product_id": p["id"],
-                         "variant_id": "", "size": str(s), "qty": 12})
-    return docs
+    return [
+        {"_id": f"{MAIN_PRODUCT['id']}:black-camo:{size}",
+         "product_id": MAIN_PRODUCT["id"], "variant_id": "black-camo",
+         "size": size, "qty": qty}
+        for size, qty in INITIAL_STOCK.items()
+    ]

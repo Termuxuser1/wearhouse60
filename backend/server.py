@@ -20,9 +20,9 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-stripe.api_key = os.environ.get("STRIPE_SECRET_KEY") or "sk_test_emergent"
-STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin")
+stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
+STRIPE_WEBHOOK_SECRET = os.environ["STRIPE_WEBHOOK_SECRET"]
+ADMIN_PASSWORD = os.environ["ADMIN_PASSWORD"]
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -58,18 +58,35 @@ class InventoryUpdate(BaseModel):
     qty: int = Field(ge=0)
 
 
+class InventoryRow(BaseModel):
+    product_id: str
+    variant_id: str
+    size: str
+    qty: int
+    name: str
+
+
+class InventoryResponse(BaseModel):
+    inventory: List[InventoryRow]
+
+
+class CatalogResponse(BaseModel):
+    currency: str
+    product: dict
+    grid: List[dict]
+
+
 # ----------------------------- Helpers -----------------------------
 async def ensure_seeded():
-    """Seed inventory once if the collection is empty."""
-    existing = await db.inventory.count_documents({})
-    if existing == 0:
-        await db.inventory.insert_many(cat.inventory_seed())
-        logger.info("Inventory seeded")
+    """Seed new catalog entries once, never reset sold or admin-adjusted stock."""
+    for doc in cat.inventory_seed():
+        key = doc.pop("_id")
+        await db.inventory.update_one({"_id": key}, {"$setOnInsert": doc}, upsert=True)
 
 
 async def get_stock_map():
-    docs = await db.inventory.find().to_list(1000)
-    return {d["_id"]: d["qty"] for d in docs}
+    docs = await db.inventory.find({"product_id": cat.MAIN_PRODUCT["id"]}, {"_id": 0}).to_list(1000)
+    return {inv_id(d["product_id"], d["variant_id"], d["size"]): d["qty"] for d in docs}
 
 
 def inv_id(product_id, variant_id, size):
@@ -79,10 +96,10 @@ def inv_id(product_id, variant_id, size):
 # ----------------------------- Public routes -----------------------------
 @api_router.get("/")
 async def root():
-    return {"message": "WAX//001 API"}
+    return {"message": "WEARHOUSE 60 API"}
 
 
-@api_router.get("/products")
+@api_router.get("/products", response_model=CatalogResponse)
 async def get_products():
     await ensure_seeded()
     stock = await get_stock_map()
@@ -93,8 +110,7 @@ async def get_products():
         "subtitle": cat.MAIN_PRODUCT["subtitle"],
         "description": cat.MAIN_PRODUCT["description"],
         "compareAtPrice": cat.MAIN_PRODUCT["compareAtPrice"],
-        "rating": cat.MAIN_PRODUCT["rating"],
-        "reviews": cat.MAIN_PRODUCT["reviews"],
+        "gallery": cat.MAIN_PRODUCT["gallery"],
         "sizes": cat.MAIN_PRODUCT["sizes"],
         "washes": [],
     }
@@ -123,14 +139,19 @@ async def create_checkout(req: CheckoutRequest):
     line_items = []
     order_items = []
     amount_total = 0
+    requested_stock = {}
     for it in req.items:
         meta = index.get(it.lookup_key)
         if not meta:
             raise HTTPException(400, f"Unknown product: {it.lookup_key}")
+        if (it.product_id != meta["product_id"] or it.variant_id != meta["variant_id"]
+                or it.size not in meta["sizes"]):
+            raise HTTPException(400, "Produit ou taille non valide.")
         key = inv_id(it.product_id, it.variant_id, it.size)
         available = stock.get(key, 0)
-        if available < it.quantity:
-            raise HTTPException(409, f"Out of stock: {meta['name']} ({it.size})")
+        requested_stock[key] = requested_stock.get(key, 0) + it.quantity
+        if available < requested_stock[key]:
+            raise HTTPException(409, f"Stock insuffisant pour la taille {it.size} : {available} disponible(s).")
 
         prices = stripe.Price.list(lookup_keys=[it.lookup_key], active=True, limit=1).data
         if not prices:
@@ -152,6 +173,9 @@ async def create_checkout(req: CheckoutRequest):
         success_url=f"{req.origin_url}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{req.origin_url}/payment/cancel",
         metadata={"order_id": order_id},
+        branding_settings={"display_name": "WEARHOUSE 60", "button_color": "#2b3a26"},
+        locale="fr",
+        adaptive_pricing={"enabled": False},
     )
     if req.email:
         base["customer_email"] = req.email
@@ -161,9 +185,9 @@ async def create_checkout(req: CheckoutRequest):
             **base, automatic_tax={"enabled": True},
             billing_address_collection="required",
         )
-    except stripe.error.InvalidRequestError as e:
-        logger.warning("automatic_tax failed, retrying without tax: %s", e)
-        session = stripe.checkout.Session.create(**base)
+    except stripe.error.StripeError as e:
+        logger.error("Stripe checkout unavailable: %s", e)
+        raise HTTPException(502, "Le paiement est momentanément indisponible. Réessayez plus tard.")
 
     now = datetime.now(timezone.utc)
     await db.payment_transactions.insert_one({
@@ -184,14 +208,19 @@ async def create_checkout(req: CheckoutRequest):
 
 async def _mark_paid(session_id: str, payment_status: str = "paid", pi: str = None):
     """Idempotently mark order paid and decrement stock once."""
+    if payment_status != "paid":
+        return
     now = datetime.now(timezone.utc)
     await db.payment_transactions.update_one(
         {"session_id": session_id, "payment_status": {"$ne": "paid"}},
         {"$set": {"status": "completed", "payment_status": payment_status,
                   "stripe_payment_intent_id": pi, "updated_at": now}},
     )
-    order = await db.orders.find_one({"session_id": session_id})
-    if order and not order.get("stock_decremented"):
+    order = await db.orders.find_one_and_update(
+        {"session_id": session_id, "stock_decremented": False},
+        {"$set": {"stock_decremented": True}}, projection={"_id": 0},
+    )
+    if order:
         for it in order["items"]:
             await db.inventory.update_one(
                 {"_id": inv_id(it["product_id"], it["variant_id"], it["size"])},
@@ -212,7 +241,7 @@ async def get_status(session_id: str):
     if record.get("payment_status") != "paid":
         try:
             s = stripe.checkout.Session.retrieve(session_id)
-            if s.payment_status == "paid" or s.status == "complete":
+            if s.payment_status == "paid":
                 await _mark_paid(session_id, "paid", s.payment_intent)
                 record = await db.payment_transactions.find_one({"session_id": session_id})
         except stripe.error.StripeError as e:
@@ -271,11 +300,11 @@ async def admin_orders(x_admin_token: Optional[str] = Header(None)):
     return {"orders": orders}
 
 
-@api_router.get("/admin/inventory")
+@api_router.get("/admin/inventory", response_model=InventoryResponse)
 async def admin_inventory(x_admin_token: Optional[str] = Header(None)):
     _check_admin(x_admin_token)
     await ensure_seeded()
-    docs = await db.inventory.find({}, {"_id": 0}).to_list(1000)
+    docs = await db.inventory.find({"product_id": cat.MAIN_PRODUCT["id"]}, {"_id": 0}).to_list(1000)
     index = cat.sku_index()
     name_by_pv = {}
     for v in index.values():
@@ -289,6 +318,9 @@ async def admin_inventory(x_admin_token: Optional[str] = Header(None)):
 @api_router.put("/admin/inventory")
 async def update_inventory(body: InventoryUpdate, x_admin_token: Optional[str] = Header(None)):
     _check_admin(x_admin_token)
+    if not any(v["product_id"] == body.product_id and v["variant_id"] == body.variant_id
+               and body.size in v["sizes"] for v in cat.all_variants()):
+        raise HTTPException(400, "Produit ou taille non valide.")
     _id = inv_id(body.product_id, body.variant_id, body.size)
     await db.inventory.update_one(
         {"_id": _id},

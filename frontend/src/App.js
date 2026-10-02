@@ -7,13 +7,12 @@ import Hero from './components/Hero';
 import DropSection from './components/DropSection';
 import ProductSection from './components/ProductSection';
 import Features from './components/Features';
-import ProductGrid from './components/ProductGrid';
 import Community from './components/Community';
 import Footer from './components/Footer';
 import PaymentSuccess from './components/pages/PaymentSuccess';
 import PaymentCancel from './components/pages/PaymentCancel';
 import Admin from './components/pages/Admin';
-import { Toaster } from './components/ui/toaster';
+import { Toaster } from 'sonner';
 
 const Landing = () => (
   <>
@@ -23,7 +22,6 @@ const Landing = () => (
       <DropSection />
       <ProductSection />
       <Features />
-      <ProductGrid />
       <Community />
     </main>
     <Footer />
@@ -32,7 +30,7 @@ const Landing = () => (
 
 function App() {
   useEffect(() => {
-    document.title = 'WAX//001 \u2014 Hand-Waxed Selvedge Jean';
+    document.title = 'WEARHOUSE 60 — WEAR IT OR DIE FOR IT';
   }, []);
 
   return (

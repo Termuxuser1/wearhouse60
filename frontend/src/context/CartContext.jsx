@@ -12,8 +12,9 @@ export const useCart = () => {
 export const CartProvider = ({ children }) => {
   const [items, setItems] = useState(() => {
     try {
-      const raw = localStorage.getItem('wax001_cart');
-      return raw ? JSON.parse(raw) : [];
+      const raw = localStorage.getItem('wearhouse60_cart_v1');
+      const saved = raw ? JSON.parse(raw) : [];
+      return Array.isArray(saved) ? saved.filter(item => item.productId === 'wearhouse60-jean' && ['1', '2', '3'].includes(item.size) && Number.isInteger(item.qty) && item.qty > 0 && Number.isFinite(item.price) && item.maxQty > 0) : [];
     } catch {
       return [];
     }
@@ -22,7 +23,7 @@ export const CartProvider = ({ children }) => {
   const [checkingOut, setCheckingOut] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('wax001_cart', JSON.stringify(items));
+    localStorage.setItem('wearhouse60_cart_v1', JSON.stringify(items));
   }, [items]);
 
   // item: { sku, productId, variantId, variantName, size, qty, price, name, image }
@@ -31,7 +32,7 @@ export const CartProvider = ({ children }) => {
       const key = `${item.sku}-${item.size}`;
       const existing = prev.find((p) => p.key === key);
       if (existing) {
-        return prev.map((p) => (p.key === key ? { ...p, qty: p.qty + item.qty } : p));
+        return prev.map((p) => (p.key === key ? { ...item, key, qty: Math.min(item.maxQty, p.qty + item.qty) } : p));
       }
       return [...prev, { ...item, key }];
     });
@@ -43,7 +44,7 @@ export const CartProvider = ({ children }) => {
   }, []);
 
   const updateQty = useCallback((key, qty) => {
-    setItems((prev) => prev.map((p) => (p.key === key ? { ...p, qty: Math.max(1, qty) } : p)));
+    setItems((prev) => prev.map((p) => (p.key === key ? { ...p, qty: Math.max(1, Math.min(p.maxQty, qty)) } : p)));
   }, []);
 
   const clearCart = useCallback(() => setItems([]), []);
@@ -71,7 +72,7 @@ export const CartProvider = ({ children }) => {
   }, [items]);
 
   const count = items.reduce((n, p) => n + p.qty, 0);
-  const subtotal = items.reduce((n, p) => n + p.qty * p.price, 0);
+  const subtotal = items.reduce((n, p) => n + p.qty * Math.round(p.price * 100), 0) / 100;
 
   return (
     <CartContext.Provider

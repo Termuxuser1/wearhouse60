@@ -1,0 +1,102 @@
+{
+  "brand": {
+    "name": "WEARHOUSE 60",
+    "slogan": "WEAR IT OR DIE FOR IT",
+    "editorial_tone": "Brutalism, High-density Raw Luxury, Military Tactical Fashion",
+    "language": "fr"
+  },
+  "typography": {
+    "heading_font": "Bebas Neue, Syne, Cabinet Grotesk, sans-serif",
+    "body_font": "IBM Plex Sans, Inter, sans-serif",
+    "mono_font": "JetBrains Mono, monospace",
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl font-black tracking-tighter uppercase",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight uppercase",
+      "h3": "text-xl sm:text-2xl font-bold uppercase",
+      "body": "text-sm sm:text-base font-normal leading-relaxed",
+      "caption": "text-xs font-mono uppercase tracking-widest text-muted-foreground"
+    }
+  },
+  "colors": {
+    "theme": "Dark / Tactical Military Brutalism",
+    "palette": {
+      "military_dark_green": "#2B3A26",
+      "military_accent_olive": "#3E4E35",
+      "military_light_green": "#5A6E4E",
+      "raw_black": "#0D0E0E",
+      "charcoal_surface": "#161816",
+      "zinc_border": "#272A27",
+      "bone_white": "#EAECE9",
+      "muted_grey": "#8A9088",
+      "strike_red": "#9E2A2B"
+    },
+    "surface_strategy": {
+      "header": "Glassmorphism with dark tint: backdrop-blur-md bg-black/80 border-b border-[#272A27]",
+      "cards": "Raw solid dark background #161816 with 1px border #272A27",
+      "buttons": "Military Green (#2B3A26) hover to (#3E4E35) with text-bone_white (#EAECE9)"
+    }
+  },
+  "visual_enhancers": {
+    "textures": "Subtle noise overlay, raw tactical grid borders, high contrast mono labels",
+    "accents": "Military dark green badge accents, 14 oz heavy denim technical specs display, camo cuff highlights",
+    "motion": "Framer Motion micro-interactions, low momentum scroll transition, tight active states"
+  },
+  "product_catalog": {
+    "single_product": {
+      "id": "wax-001",
+      "title": "JEAN WAX//001 - 60 WAXED JEAN",
+      "price": 99.99,
+      "compare_at_price": 110.0,
+      "currency": "EUR",
+      "total_stock": 50,
+      "stock_breakdown": {
+        "Taille 1": 17,
+        "Taille 2": 17,
+        "Taille 3": 16
+      },
+      "specs": {
+        "weight": "Denim 14 oz (475 g/m²)",
+        "finish": "Traitement ciré marbré artisanal",
+        "detail_1": "Revers doublé motif camo",
+        "detail_2": "Patch en cuir gravé signature WEARHOUSE 60 à la ceinture"
+      },
+      "description_fr": "Un denim pèsant 14 oz (475 g/m²), plus lourd et résistant qu'un jean classique. Traitement ciré artisanal offrant des reflets marbrés et un brillant irrégulier unique à chaque pièce. Revers intérieur imprimé camo iconique visible lorsqu'il est retroussé. Patch ceinture gravé avec la signature manuscrite de la marque. Édition limitée à 50 pièces."
+    }
+  },
+  "image_urls": {
+    "logo": "https://customer-assets-wrfwihn1.emergentagent.net/job_product-landing-copy/artifacts/ip6fp8pj_Capture%20d%E2%80%99e%CC%81cran%202026-09-28%20a%CC%80%2014.11.54%20copie.png",
+    "hero_front": "https://customer-assets-wrfwihn1.emergentagent.net/job_product-landing-copy/artifacts/naxsv9um_1.webp",
+    "hero_back": "https://customer-assets-wrfwihn1.emergentagent.net/job_product-landing-copy/artifacts/61wcsd85_2.webp",
+    "editorial_lifestyle": "https://customer-assets-wrfwihn1.emergentagent.net/job_product-landing-copy/artifacts/2vnun2wk_Sans_titre-1.PNG",
+    "flat_lay": "https://customer-assets-wrfwihn1.emergentagent.net/job_product-landing-copy/artifacts/i68ug3t1_Illustration_sans_titre.png"
+  },
+  "layout_and_components": {
+    "header": {
+      "component_path": "/app/frontend/src/components/Header.jsx",
+      "guidelines": "Display logo image, navigation links, cart drawer trigger with item badge, military green accent border."
+    },
+    "hero": {
+      "component_path": "/app/frontend/src/components/Hero.jsx",
+      "guidelines": "High impact brand statement 'WEAR IT OR DIE FOR IT', showcase WAX//001 editorial assets, prompt buy action."
+    },
+    "product_section": {
+      "component_path": "/app/frontend/src/components/ProductSection.jsx",
+      "guidelines": "Editorial gallery view with front/back/editorial/flat photos, size selector (Taille 1, 2, 3), real backend stock status, price display (99.99€ vs 110€ original), add to cart button."
+    },
+    "cart_drawer": {
+      "component_path": "/app/frontend/src/components/CartDrawer.jsx",
+      "guidelines": "Show selected sizes, quantities, real price calculation in EUR, instant Stripe Sandbox checkout trigger."
+    },
+    "admin_panel": {
+      "component_path": "/app/frontend/src/components/pages/Admin.jsx",
+      "guidelines": "Real backend inventory control for total stock (50 items) and sizes (17/17/16 breakdown)."
+    }
+  },
+  "instructions_to_main_agent": [
+    "Ensure all user interaction buttons and input elements have data-testid attributes (e.g. data-testid='add-to-cart-button', data-testid='size-select-1').",
+    "Preserve French editorial wording exactly. Do not add fake customer reviews, newsletter popups, fake stock timers, or fictitious social links.",
+    "Use exact image URLs provided in image_urls section without modification or substitution.",
+    "Maintain high-contrast dark theme with military dark green accents (#2B3A26, #3E4E35)."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": "All components must be written in Javascript (.js / .jsx). Ensure seamless responsive layout with mobile-first CSS using Tailwind scale."
+}

@@ -1,4 +1,4 @@
-"""Idempotent Stripe catalog setup for WAX//001.
+"""Idempotent Stripe catalog setup for WEARHOUSE 60.
 Creates Products + Prices (lookup_keys) and sets a head-office tax address.
 Run: python setup_stripe.py
 """
@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 import stripe
+from decimal import Decimal
 
 import catalog as cat
 
@@ -40,14 +41,15 @@ def get_or_create_product(pid, name, tax_code="txcd_99999999"):
 
 def ensure_price(product, lookup_key, amount_cents, currency="eur"):
     existing = stripe.Price.list(lookup_keys=[lookup_key], active=True, limit=1).data
-    if existing and existing[0].unit_amount == amount_cents and existing[0].currency == currency:
+    if (existing and existing[0].unit_amount == amount_cents
+            and existing[0].currency == currency and existing[0].tax_behavior == "inclusive"):
         print(f"  price ok: {lookup_key} ({amount_cents})")
         return existing[0]
     if existing:
         stripe.Price.modify(existing[0].id, active=False)
     price = stripe.Price.create(
         product=product.id, unit_amount=amount_cents, currency=currency,
-        lookup_key=lookup_key, transfer_lookup_key=True,
+        lookup_key=lookup_key, transfer_lookup_key=True, tax_behavior="inclusive",
     )
     print(f"  price created: {lookup_key} ({amount_cents})")
     return price
@@ -60,7 +62,7 @@ def main():
     jean = get_or_create_product(cat.MAIN_PRODUCT["id"], cat.MAIN_PRODUCT["name"])
     print(f"Product: {jean.name}")
     for w in cat.MAIN_PRODUCT["washes"]:
-        ensure_price(jean, w["lookup_key"], int(w["price"] * 100))
+        ensure_price(jean, w["lookup_key"], int(Decimal(str(w["price"])) * 100))
 
     # Grid products: product + single price each
     for p in cat.GRID_PRODUCTS:

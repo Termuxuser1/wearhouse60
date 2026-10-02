@@ -1,187 +1,55 @@
-import React, { useState, useEffect } from 'react';
-import { useCart } from '../context/CartContext';
-import { toast } from '../hooks/use-toast';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ArrowUpRight, Check, Loader2 } from 'lucide-react';
 import { getProducts } from '../api';
-import { product as mockProduct } from '../mock';
-import { Star, Truck, RotateCcw, Minus, Plus, Check } from 'lucide-react';
+import { useCart } from '../context/CartContext';
+import { ProductGallery } from './ProductGallery';
+import { ProductOptions } from './ProductOptions';
+import { money } from '../brand';
 
-const ProductSection = () => {
-  const { addItem } = useCart();
-  const [data, setData] = useState(null);
-  const [washId, setWashId] = useState(mockProduct.washes[0].id);
+export const ProductSection = () => {
+  const { addItem, items } = useCart();
+  const [product, setProduct] = useState(null);
   const [size, setSize] = useState(null);
   const [qty, setQty] = useState(1);
-
-  useEffect(() => {
-    getProducts()
-      .then((d) => setData(d.product))
-      .catch(() => {});
+  const [error, setError] = useState('');
+  const load = useCallback(() => {
+    setError('');
+    getProducts().then(data => setProduct(data.product)).catch(() => setError('Le stock est indisponible pour le moment.'));
   }, []);
-
-  const p = data || mockProduct;
-  const wash = p.washes.find((w) => w.id === washId) || p.washes[0];
-  const price = wash.price;
-  const availability = wash.availability || null; // { size: qty }
-
-  const isSoldOut = (s) => {
-    if (availability) return (availability[String(s)] || 0) <= 0;
-    return (mockProduct.soldOutSizes || []).includes(s);
-  };
-
+  useEffect(() => { load(); window.addEventListener('focus', load); return () => window.removeEventListener('focus', load); }, [load]);
+  const wash = product?.washes[0];
+  const stock = wash?.availability || {};
+  const inCart = items.find(item => item.sku === wash?.lookup_key && item.size === size)?.qty || 0;
+  const available = Math.max(0, (stock[size] || 0) - inCart);
+  const totalStock = Object.values(stock).reduce((sum, value) => sum + value, 0);
   const handleAdd = () => {
-    if (!size) {
-      toast({ title: 'Select a size', description: 'Please choose your size before adding to cart.' });
-      return;
-    }
-    addItem({
-      sku: wash.lookup_key,
-      productId: p.id,
-      variantId: wash.id,
-      variantName: wash.name,
-      size,
-      qty,
-      price,
-      name: `${p.name} — ${wash.name}`,
-      image: wash.image,
-    });
+    if (!size || !available || error) return;
+    addItem({ sku: wash.lookup_key, productId: product.id, variantId: wash.id, variantName: wash.name,
+      size, qty: Math.min(qty, available), price: wash.price, name: product.name, image: wash.image, maxQty: stock[size] });
+    setQty(1);
   };
-
   return (
-    <section id="product" className="max-w-[1600px] mx-auto px-5 md:px-8 py-16 md:py-24">
-      <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-start">
-        <div className="lg:sticky lg:top-24">
-          <div className="aspect-[4/5] bg-[#ededed] overflow-hidden">
-            <img
-              key={wash.image}
-              src={wash.image}
-              alt={`${p.name} ${wash.name}`}
-              className="w-full h-full object-cover reveal"
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-3 mt-3">
-            {p.washes.map((w) => (
-              <button
-                key={w.id}
-                onClick={() => setWashId(w.id)}
-                className={`aspect-square bg-[#ededed] overflow-hidden border-2 transition-colors ${
-                  w.id === washId ? 'border-black' : 'border-transparent hover:border-black/30'
-                }`}
-              >
-                <img src={w.hover} alt={w.name} className="w-full h-full object-cover" />
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="max-w-md">
-          <p className="font-cond uppercase tracking-[0.25em] text-xs text-[#e4001b] mb-3">{p.subtitle}</p>
-          <h2 className="font-display text-5xl md:text-6xl leading-none uppercase">{p.name}</h2>
-
-          <div className="flex items-center gap-3 mt-4">
-            <div className="flex items-center gap-0.5">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-4 h-4 fill-black text-black" />
-              ))}
-            </div>
-            <span className="text-sm text-black/60">{p.rating} · {p.reviews} reviews</span>
-          </div>
-
-          <div className="flex items-end gap-3 mt-5">
-            <span className="font-display text-3xl">€{price}</span>
-            {p.compareAtPrice > price && (
-              <span className="text-black/40 line-through text-lg mb-0.5">€{p.compareAtPrice}</span>
-            )}
-            {p.compareAtPrice > price && (
-              <span className="bg-[#e4001b] text-white text-xs font-semibold px-2 py-1 mb-1">
-                -{Math.round((1 - price / p.compareAtPrice) * 100)}%
-              </span>
-            )}
-          </div>
-
-          <p className="text-black/70 leading-relaxed mt-5 text-[15px]">{p.description}</p>
-
-          <div className="mt-7">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-cond uppercase tracking-widest text-xs text-black/60">Wash</span>
-              <span className="font-cond uppercase tracking-wide text-sm">{wash.name}</span>
-            </div>
-            <div className="flex gap-3">
-              {p.washes.map((w) => (
-                <button
-                  key={w.id}
-                  onClick={() => { setWashId(w.id); setSize(null); }}
-                  aria-label={w.name}
-                  className={`w-9 h-9 rounded-full border-2 transition-all ${
-                    w.id === washId ? 'border-black scale-110' : 'border-black/15 hover:border-black/40'
-                  }`}
-                  style={{ backgroundColor: w.hex }}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-7">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-cond uppercase tracking-widest text-xs text-black/60">Size (waist)</span>
-              <button className="text-xs text-black/50 underline underline-offset-2 hover:text-black">Size guide</button>
-            </div>
-            <div className="grid grid-cols-4 gap-2">
-              {p.sizes.map((s) => {
-                const soldOut = isSoldOut(s);
-                return (
-                  <button
-                    key={s}
-                    disabled={soldOut}
-                    onClick={() => setSize(s)}
-                    className={`h-11 font-cond text-sm border transition-all relative ${
-                      soldOut
-                        ? 'border-black/10 text-black/25 cursor-not-allowed line-through'
-                        : size === s
-                        ? 'border-black bg-black text-white'
-                        : 'border-black/20 hover:border-black'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="mt-7 flex gap-3">
-            <div className="flex items-center border border-black/20">
-              <button className="w-11 h-12 flex items-center justify-center hover:bg-black/5" onClick={() => setQty((q) => Math.max(1, q - 1))}>
-                <Minus className="w-4 h-4" />
-              </button>
-              <span className="w-10 text-center font-cond">{qty}</span>
-              <button className="w-11 h-12 flex items-center justify-center hover:bg-black/5" onClick={() => setQty((q) => q + 1)}>
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-            <button
-              onClick={handleAdd}
-              className="flex-1 bg-black text-white h-12 font-cond uppercase tracking-[0.2em] text-sm hover:bg-[#e4001b] transition-colors"
-            >
-              Add to cart — €{price * qty}
+    <section id="product" className="page-width section-space">
+      <div className="product-section-label"><h2 className="eyebrow">01 / LE JEAN</h2><span>WEARHOUSE 60 — DENIM DE CARACTÈRE</span></div>
+      {error && <div role="alert" data-testid="product-error" className="error-message">{error}<button onClick={load} data-testid="retry-products">Réessayer</button></div>}
+      {!product ? (!error && <div className="loading-product" data-testid="product-loading"><Loader2 className="animate-spin" />Chargement du jean…</div>) : (
+        <div className="product-layout">
+          <ProductGallery images={product.gallery} />
+          <div className="product-info">
+            <p className="eyebrow accent">NOIR CIRÉ. ENVERS CAMO.</p>
+            <p className="product-name font-display" data-testid="product-name">{product.name}</p>
+            <div className="product-price"><span data-testid="product-price">{money(wash.price)}</span><del data-testid="product-compare-price">{money(product.compareAtPrice)}</del><span className="price-note">TTC</span></div>
+            <p className="product-description" data-testid="product-description">{product.description}</p>
+            <div className="product-color" data-testid="product-color"><span className="color-swatch" />{wash.name}<Check size={15} /></div>
+            <ProductOptions sizes={product.sizes} stock={stock} size={size} setSize={value => { setSize(value); setQty(1); }} qty={Math.min(qty, available || 1)} setQty={setQty} available={available} totalStock={totalStock} />
+            <button className="action action-primary add-to-cart" disabled={!size || !available || !!error} onClick={handleAdd} data-testid="add-to-cart">
+              {totalStock === 0 ? 'RUPTURE DE STOCK' : !size ? 'CHOISIR UNE TAILLE' : available === 0 ? 'STOCK DÉJÀ DANS LE PANIER' : `AJOUTER AU PANIER — ${money(wash.price * Math.min(qty, available))}`}<ArrowUpRight size={18} />
             </button>
-          </div>
-
-          <div className="mt-7 space-y-3 border-t pt-6">
-            {[
-              { icon: Truck, text: 'Free shipping worldwide from €150' },
-              { icon: RotateCcw, text: '30-day free returns' },
-              { icon: Check, text: 'Japanese 14.5oz selvedge · made to last' },
-            ].map((b, i) => (
-              <div key={i} className="flex items-center gap-3 text-sm text-black/70">
-                <b.icon className="w-4 h-4 text-black" strokeWidth={1.6} />
-                {b.text}
-              </div>
-            ))}
+            <div className="product-facts"><p><Check size={16} /> Denim épais 14 oz · 100 % coton</p><p><Check size={16} /> Coupe ample · Finition cirée marbrée</p><p><Check size={16} /> Revers camo · Patch gravé à l’arrière</p></div>
           </div>
         </div>
-      </div>
+      )}
     </section>
   );
 };
-
 export default ProductSection;
