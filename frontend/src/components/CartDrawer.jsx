@@ -6,7 +6,16 @@ import { useCart } from '../context/CartContext';
 import { toast } from '../hooks/use-toast';
 
 const CartDrawer = () => {
-  const { items, open, setOpen, removeItem, updateQty, subtotal } = useCart();
+  const { items, open, setOpen, removeItem, updateQty, subtotal, checkout, checkingOut } = useCart();
+
+  const handleCheckout = async () => {
+    try {
+      await checkout();
+    } catch (e) {
+      const msg = e?.response?.data?.detail || 'Checkout failed. Please try again.';
+      toast({ title: 'Checkout error', description: msg });
+    }
+  };
 
   const freeShipAt = 150;
   const remaining = Math.max(0, freeShipAt - subtotal);
@@ -68,7 +77,7 @@ const CartDrawer = () => {
                       </button>
                     </div>
                     <p className="text-xs text-black/50 mt-0.5">
-                      {it.wash ? `${it.wash} · ` : ''}{it.size ? `Size ${it.size}` : ''}
+                      {it.variantName ? `${it.variantName} · ` : ''}{it.size ? `Size ${it.size}` : ''}
                     </p>
                     <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center border border-black/15">
@@ -99,15 +108,11 @@ const CartDrawer = () => {
                 <span className="font-display text-xl">€{subtotal}</span>
               </div>
               <Button
-                onClick={() =>
-                  toast({
-                    title: 'Checkout is a demo',
-                    description: 'Payments are not connected yet — this is a frontend preview.',
-                  })
-                }
-                className="w-full rounded-none bg-black text-white hover:bg-[#e4001b] font-cond tracking-[0.2em] uppercase text-sm h-12"
+                onClick={handleCheckout}
+                disabled={checkingOut}
+                className="w-full rounded-none bg-black text-white hover:bg-[#e4001b] font-cond tracking-[0.2em] uppercase text-sm h-12 disabled:opacity-60"
               >
-                Checkout
+                {checkingOut ? 'Redirecting…' : 'Checkout'}
               </Button>
               <p className="text-[11px] text-center text-black/40">
                 Taxes & shipping calculated at checkout

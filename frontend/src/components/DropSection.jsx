@@ -35,11 +35,14 @@ const DropSection = () => {
         {/* set preview */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10 max-w-4xl mx-auto">
           {[
-            { label: 'The Jean', img: wash.image, price: wash.price },
-            { label: 'The Jacket', img: wash.hover, price: 215 },
-            { label: 'The Short', img: product.washes[(dropColors.findIndex((d)=>d.id===active)+1)%3].image, price: 95 },
+            { label: 'The Jean', img: wash.image, price: wash.price,
+              sku: `wax001_${active.replace(/-/g, '_')}`, productId: 'wax-001', variantId: active, variantName: wash.name, size: '32', name: `WAX//001 — ${wash.name}` },
+            { label: 'The Jacket', img: wash.hover, price: 215,
+              sku: 'wax_trucker_jacket', productId: 'wax-jacket', variantId: '', variantName: '', size: 'M', name: 'WAX//Trucker Jacket' },
+            { label: 'The Short', img: product.washes[(dropColors.findIndex((d)=>d.id===active)+1)%3].image, price: 95,
+              sku: 'wax_cutoff_short', productId: 'wax-short', variantId: '', variantName: '', size: '32', name: 'WAX//001 Cut-Off Short' },
           ].map((item, i) => (
-            <div key={i} className="group cursor-pointer" onClick={() => addItem({ id: `${wash.id}-${item.label}`, name: `${wash.name} ${item.label}`, wash: wash.name, size: 'OS', qty: 1, price: item.price, image: item.img })}>
+            <div key={i} className="group cursor-pointer" onClick={() => addItem({ sku: item.sku, productId: item.productId, variantId: item.variantId, variantName: item.variantName, name: item.name, size: item.size, qty: 1, price: item.price, image: item.img })}>
               <div className="aspect-[4/5] bg-white overflow-hidden">
                 <img
                   src={item.img}
